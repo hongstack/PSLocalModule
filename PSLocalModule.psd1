@@ -8,7 +8,7 @@
 
 @{
     RootModule = 'PSLocalModule.psm1'
-    ModuleVersion = '1.1.0'
+    ModuleVersion = '1.0.1'
     GUID = '1993f0dd-60b3-432f-bb56-423026762edd'
     Author = 'Hong Li'
     Copyright = '(c) 2019 Hong Li. All rights reserved.'
@@ -19,13 +19,13 @@
     CmdletsToExport   = @()
     VariablesToExport = '*'
     AliasesToExport   = @('scp', 'gcp', 'tlm', 'inlm')
-	
-	PrivateData = @{
+    
+    PrivateData = @{
         PSData = @{
             Tags         = 'PowerShell', 'Module', 'PSEdition_Core', 'PSEdition_Desktop', 'Windows'
-			LicenseUri   = 'https://github.com/hongstack/PSLocalModule/blob/master/LICENSE'
-			ProjectUri   = 'https://github.com/hongstack/PSLocalModule'
-            ReleaseNotes = 'https://github.com/hongstack/PSLocalModule/releases/tag/1.1.0'
+            LicenseUri   = 'https://github.com/hongstack/PSLocalModule/blob/master/LICENSE'
+            ProjectUri   = 'https://github.com/hongstack/PSLocalModule'
+            ReleaseNotes = 'https://github.com/hongstack/PSLocalModule/releases/tag/1.0.1'
         }
     }
 }

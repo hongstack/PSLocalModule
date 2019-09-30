@@ -17,10 +17,10 @@ Set-PSCodePath -Path C:\Dev\Workspace\PowerShell
 This commands will set C:\Dev\Workspace\PowerShell as PSCodePath
 #>
 function Set-PSCodePath {
-	[CmdletBinding()]
+    [CmdletBinding()]
     Param(
-		[Parameter(Mandatory=$true, Position=0)][String]$Path
-	)
+        [Parameter(Mandatory=$true, Position=0)][String]$Path
+    )
     
     if (!(Test-Path -Path $Path)) {
         Write-Warning "Path does not exist: $Path"
@@ -48,7 +48,7 @@ Gets the configured PSCodePath.
 An error will be returned if the PSCodePath has not set yet, or set but does not exist.
 #>
 function Get-PSCodePath {
-	[CmdletBinding()]
+    [CmdletBinding()]
     Param()
 
     $ModuleConfigPath = $PSCommandPath -replace 'psm1', 'json'
@@ -88,30 +88,46 @@ installation.
 
 If the module being installed has the same name and version, the installation will fail unless 
 -Force parameter is used, which the existing module will be replaced.
+
+.PARAMETER ModuleName
+Specifies the module to be installed from PSCodePath
+
+.PARAMETER Force
+Specifies whether to override the existing module/version
+
+.Example
+Install-LocalModule <APP1> -whatif -verbose
+
+This command will display what to be installed with verbose output. It DOES NOT install anything.
+
+.Example
+Install-LocalModule <APP1>
+
+This command will install <APP1> to user specific module path.
 #>
 function Install-LocalModule {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $True, ConfirmImpact = "Medium")]
     Param(
-		[String]$ModuleName,
+        [String]$ModuleName,
         [Switch]$Force
-	)
+    )
     
     # Resolve module name and path
     if ($ModuleName) {
         $ModulePath = Get-PSCodePath | Join-Path -ChildPath $ModuleName
     } else {
-        Write-Verbose "Installing module from current directory"
-        $ModulePath = Get-Location
+        $ModulePath = (Get-Location).Path
         $ModuleName = $ModulePath | Split-Path -Leaf
+        Write-Verbose "Installing $ModuleName from current directory"
     }
 
     # Verify module existence and get version
     $PSD1File = $ModulePath | Join-Path -ChildPath "$ModuleName.psd1"
     if (Test-Path -Path $PSD1File) {
         $ModuleVersion = (Import-PowerShellDataFile -Path $PSD1File).ModuleVersion
-        Write-Verbose "Found module metadata: $PSD1File"
+        Write-Verbose "Found module manifest: $PSD1File"
     } else {
-        throw "Cannot find module metadata: $PSD1File"
+        throw "Cannot find module manifest: $PSD1File"
     }
 
     # Get canonical case of module name
@@ -121,23 +137,42 @@ function Install-LocalModule {
     $UserModulePath = $PSUserPath | Join-Path -ChildPath $ModuleName | Join-Path -ChildPath $ModuleVersion
     if (Test-Path -Path $UserModulePath) {
         if ($Force) {
-            Remove-Item -Path $UserModulePath -Recurse -Force
-            New-Item    -Path $UserModulePath -ItemType Directory | Out-Null
-            Write-Verbose "Recreated directory: $UserModulePath"
+            if ($PSCmdlet.ShouldProcess($UserModulePath, "Remove")) {
+                Remove-Item -Path $UserModulePath -Recurse -Force
+            }
+            if ($PSCmdlet.ShouldProcess($UserModulePath, "Create")) {
+                $null = New-Item -Path $UserModulePath -ItemType Directory
+            }
         } else {
             throw "Module exists: $UserModulePath"
         }
     } else {
-        New-Item -Path $UserModulePath -ItemType Directory | Out-Null
-        Write-Verbose "Created directory: $UserModulePath"
+        if ($PSCmdlet.ShouldProcess($UserModulePath, "Create")) {
+            $null = New-Item -Path $UserModulePath -ItemType Directory
+        }
     }
 
     # Copy modules to PSUserPath
-    $Excludes = @('.gitignore', '.psignore')
-    if (Test-Path "$ModulePath\.gitignore") { $Excludes += @(Get-Content -Path "$ModulePath\.gitignore") }
-    if (Test-Path "$ModulePath\.psignore")  { $Excludes += @(Get-Content -Path "$ModulePath\.psignore") }
-    Copy-item "$ModulePath\*" $UserModulePath -Exclude $Excludes -Recurse
-
+    $RawExcludes = @()
+    $ResolvedExcludes = @()
+    '.gitignore', '.psignore' | ForEach { Join-Path $ModulePath $_} | Where { Test-Path $_ } | ForEach {
+        $ResolvedExcludes += $_
+        $RawExcludes += @(Get-Content -Path $_ | Where {$_ -notlike '#*'})
+    }
+    
+    $ResolvedExcludes += ($RawExcludes | ForEach { Join-Path $ModulePath $_} | Where {Test-Path $_} | Resolve-Path).Path
+    $ResolvedExcludes += (Get-ChildItem $ModulePath -Directory -Recurse  | ForEach {
+        $Parent = $_.FullName
+        $RawExcludes | ForEach {Join-Path $Parent $_} | Where {Test-Path $_} | Resolve-Path
+    }).Path
+    Write-Verbose "Excluding: $($ResolvedExcludes -join '; ')"
+    
+    Get-ChildItem $ModulePath -Recurse | Where { $_.FullName -notin $ResolvedExcludes } | ForEach {
+        if ($PSCmdlet.ShouldProcess($_.FullName, "Copy")) {
+            Copy-Item $_.FullName (Join-Path $UserModulePath ($_.FullName.Substring($ModulePath.length)))
+        }
+    }
+    
     Write-Verbose ("Completed installation of {0}_{1}" -f $ModuleName, $ModuleVersion)
 }
 Set-Alias -Name inlm -Value Install-LocalModule
@@ -153,7 +188,7 @@ The Save-LocalModule wraps Install-Module, and save the downloaded module to PSC
 function Save-LocalModule {
     [CmdletBinding()]
     Param(
-	)
+    )
     throw "Not implemented"
 }
 Set-Alias -Name svlm -Value Save-LocalModule
@@ -170,7 +205,7 @@ and displays their information.
 function Show-LocalModule {
     [CmdletBinding()]
     Param(
-	)
+    )
     throw "Not implemented"
 }
 Set-Alias -Name shlm -Value Show-LocalModule
@@ -192,7 +227,7 @@ function Test-LocalModule {
         [Alias('Path')] [String]$ModuleName,
         [Alias("Name")] [String[]]$TestName,
         [Alias('Tags')] [String[]]$Tag
-	)
+    )
     
     # Re-Import Pester with minimum version
     Get-Module Pester | Remove-Module -Force

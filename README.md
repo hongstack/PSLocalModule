@@ -9,34 +9,36 @@ Local PowerShell modules are modules installed to the user specific module path,
 ## Installation
 ### Direct Download
 Download [PSLocalModule v1.0.1](https://github.com/hongstack/PSLocalModule/releases/download/1.0.1/PSLocalModule_1.0.1.zip), extracts the content under one of the following locations:
-* `C:\Program Files\WindowsPowerShell\Modules` *Applies to all users, but may not be an option for some corporate environments*.
+* `C:\Program Files\WindowsPowerShell\Modules` *Applies to all users, but may not be an option in some corporate environments*.
 * `$env:USERPROFILE\Documents\WindowsPowerShell\Modules` *Applies to current user*.
 
 ### Manual Build
-Clone [PSLocalModule](https://github.com/hongstack/PSLocalModule.git), then go into the *PSLocalModule* directory, executing:
 ```PowerShell
+git clone https://github.com/hongstack/PSLocalModule.git
+Set-Location PSLocalModule
 Import-Module -Path .\PSLocalModule.psd1
-Import-LocalModule -Verbose
+Install-LocalModule -Verbose -Whatif
+Install-LocalModule
 ```
 
 ## Usage
 ### Initial Setup
-After installation, it is recommended to set the PSCodePath where local PowerShell modules exist using the following command:
-````PowerShell
-Set-PSCodePath -Path <Path_To_PowerShell_Local_Modules>
-````
+After installation, it is recommended to set the `PSCodePath` where local PowerShell modules reside using the following command:
+```PowerShell
+Set-PSCodePath -Path <Path_To_LocalModules>
+```
 Run `Get-PSCodePath` gets the already-set PSCodePath.
 
 ### Install Local Module
-Local module can be installed from PSCodePath or from current directory:
-````PowerShell
+Local module can be installed from `PSCodePath` or from current directory:
+```PowerShell
 Install-LocalModule <Module_Name> # Install from PSCodePath
 Install-LocalModule # Install from current directory
-````
-It is strongly recommended to use `-whatif` and `-verbose` parameters before running real installation.
+```
+It is strongly recommended to use `-Whatif` and `-Verbose` parameters before running real installation.
 
 ### .PSIGNORE
-Local module can have `.psignore` file which specifies what directories/files can be ignored during building. Additionally any directories/files specified in `.gitignore` will also be ignored. The `.psignore` and `.gitignore` themselves are ignored by default.
+Local modules can have `.psignore` file which specifies what directories/files can be ignored during building. Additionally any directories/files specified in `.gitignore` will also be ignored. The `.psignore` and `.gitignore` themselves are ignored by default.
 
 The `.psignore` file supports ignoring files and directories, and wildcards (*, ?). It also treats any line starting with `#` as comment.
 ### More Info
